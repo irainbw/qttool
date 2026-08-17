@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <QAbstractNativeEventFilter>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
@@ -12,71 +11,72 @@
 class QEvent;
 class QScreen;
 class QWidget;
+class FramelessNativeHub;
 
-class FramelessHelper : public QObject, public QAbstractNativeEventFilter
+class FramelessHelper : public QObject
 {
     Q_OBJECT
+    friend class FramelessNativeHub;
 public:
     explicit FramelessHelper(QObject *parent = nullptr);
     ~FramelessHelper() override;
 
     void activateOn(QWidget *topLevelWidget);
     void setTitleBar(QWidget *titleBarWidget);
+    void setSystemChromeEnabled(bool enabled);
+    bool isSystemChromeEnabled() const;
     void toggleMaximized();
     bool isMaximizedState() const;
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
-#else
-    bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
-#endif
 
 private:
     enum ResizeRegion {
         None, Top, Bottom, Left, Right,
         TopLeft, TopRight, BottomLeft, BottomRight, Inner
     };
-    enum class SnapKind { None, Maximized, Left, Right };
 
-    bool isManagedWidget(const QObject *obj) const;
-    bool useNativeHitTest() const;
-    ResizeRegion getRegion(const QPoint &posInTarget) const;
-    void updateCursorShape(const QPoint &posInTarget);
-    QPoint mapToTarget(const QObject *watched, const QPoint &pos) const;
-    QRect titleBarRectInTarget() const;
-    bool isInteractiveWidget(const QWidget *widget) const;
-    bool isEffectivelyMaximized() const;
-    bool isTiled() const;
+    void watch(QWidget *widget);
+    void syncNativeHandle();
+    void applyNativeChrome();
+    void removeNativeChrome();
+    bool nativeMoveResizeActive() const;
+    bool handleNativeEvent(void *message, qintptr *result);
+    ResizeRegion hitTest(const QPoint &posInTarget) const;
+    QRect titleBarRect() const;
+    bool isCaptionButton(const QWidget *widget) const;
     QScreen *screenAt(const QPoint &globalPos) const;
     void maximizeOnScreen(QScreen *screen);
-    void restoreToNormal(const QRect &geometry);
-    void restoreForDrag(const QPoint &globalPos, const QPoint &localPos);
-    void handleDragMove(const QPoint &globalPos);
-    void startInteraction(ResizeRegion region, const QPoint &localPos, const QPoint &globalPos);
-    void finishInteraction(bool applySnap);
-    QRect clampResizeGeometry(const QRect &candidate) const;
-    QRect restoreGeometryHint() const;
-    void applyPendingSnap();
-    void applyNativeWindowStyle();
-    bool handleNativeEvent(const QByteArray &eventType, void *message, qintptr *result);
-    Qt::Edges edgesFromRegion(ResizeRegion region) const;
+    void restoreToNormal();
+    void updateCursor(ResizeRegion region);
+    void onPress(ResizeRegion region, const QPoint &localPos, const QPoint &globalPos);
+    void onMove(const QPoint &globalPos);
+    void onRelease(bool applySnap);
+    QRect clampResize(const QRect &rect) const;
 
-    int m_padding = 8;
-    int m_snapThreshold = 8;
-    bool m_isPressed = false;
-    SnapKind m_snapKind = SnapKind::None;
-    QPoint m_dragStartPos;
-    QPoint m_pressLocalPos;
-    QRect m_windowRectBeforeDrag;
+    static constexpr int kBorder = 8;
+
+    QPointer<QWidget> m_window;
+    QPointer<QWidget> m_titleBar;
     QRect m_restoreGeometry;
-    ResizeRegion m_currentRegion = None;
-    SnapKind m_pendingSnap = SnapKind::None;
-    QPointer<QScreen> m_pendingSnapScreen;
+    mutable QRect m_titleBarRectCache;
+    mutable bool m_titleBarRectDirty = true;
+    bool m_pseudoMaximized = false;
+    Qt::CursorShape m_lastCursor = Qt::ArrowCursor;
 
-    QPointer<QWidget> m_targetWidget;
-    QPointer<QWidget> m_titleBarWidget;
+#ifdef Q_OS_WIN
+    void *m_hwnd = nullptr;
+    bool m_chromeApplied = false;
+    bool m_inNative = false;
+    bool m_systemChromeEnabled = true;
+#endif
+
+    bool m_pressed = false;
+    ResizeRegion m_region = None;
+    QPoint m_pressGlobal;
+    QPoint m_pressLocal;
+    QRect m_pressGeometry;
 };
 
 #endif // FRAMELESSHELPER_H
