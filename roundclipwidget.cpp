@@ -74,9 +74,9 @@ RoundClipWidget::RoundClipWidget(QWidget *parent)
     : QWidget(parent)
     , m_effect(new RoundClipEffect(this))
 {
-    setAttribute(Qt::WA_TranslucentBackground);
-    setAttribute(Qt::WA_StyledBackground, true);
-    setAutoFillBackground(false);
+     setAttribute(Qt::WA_TranslucentBackground);
+    // setAttribute(Qt::WA_StyledBackground, true);
+    // setAutoFillBackground(false);
     setGraphicsEffect(m_effect);
     m_effect->setRadius(m_radius);
 }
@@ -106,11 +106,11 @@ void RoundClipWidget::changeEvent(QEvent *event)
         applyRadius();
 }
 
-void RoundClipWidget::paintEvent(QPaintEvent *)
-{
-    QPainter painter(this);
-    painter.fillRect(rect(), m_fill);
-}
+// void RoundClipWidget::paintEvent(QPaintEvent *)
+// {
+//     QPainter painter(this);
+//     painter.fillRect(rect(), m_fill);
+// }
 
 int RoundClipWidget::effectiveRadius() const
 {

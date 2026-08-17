@@ -40,7 +40,7 @@ public:
 
 protected:
     void changeEvent(QEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
+    // void paintEvent(QPaintEvent *event) override;
 
 private:
     int effectiveRadius() const;
